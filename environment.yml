@@ -1,0 +1,13 @@
+name: arabic-document-ai
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - opencv
+  - pillow
+  - numpy
+  - scikit-learn
+  - pip
+  - pip:
+      - pytesseract

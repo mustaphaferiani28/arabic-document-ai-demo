@@ -16,7 +16,10 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+import platform
+if platform.system() == "Windows":
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Sinon (Linux/Docker), tesseract est déjà dans le PATH grâce à apt-get install
 
 # ---------- STEP 1: PREPROCESSING ----------
 def preprocess_image(image_path):

@@ -1,0 +1,19 @@
+# docker-compose.yml
+# Defines how to run the ETL service with a persistent volume (so the
+# database survives container restarts) and configurable environment
+# variables (so behavior can change without touching the code).
+
+services:
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile.etl
+    volumes:
+      # host_folder:container_folder
+      # The warehouse database is written inside the container to /app/etl,
+      # but this line "mirrors" it to the ./etl folder on your machine —
+      # so the .db file survives even if the container is deleted.
+      - ./etl:/app/etl
+    environment:
+      - DB_PATH=/app/etl/document_warehouse.db
+      - REVIEW_THRESHOLD=0.85

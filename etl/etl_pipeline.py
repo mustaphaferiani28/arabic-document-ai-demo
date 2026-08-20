@@ -14,6 +14,13 @@ In production, replace:
 import sqlite3
 import json
 import re
+import os
+
+# ---------- CONFIG (from environment variables — Docker-friendly pattern) ----------
+# In production, DB_PATH would point to a mounted volume, and connection details
+# for Oracle/MS SQL would also come from env vars (never hardcoded in code).
+DB_PATH = os.environ.get("DB_PATH", "document_warehouse.db")
+REVIEW_THRESHOLD = float(os.environ.get("REVIEW_THRESHOLD", "0.80"))
 
 
 # ---------- EXTRACT ----------
@@ -77,8 +84,21 @@ def transform_documents(raw_docs):
     return clean_records
 
 
+def apply_confidence_threshold(records, threshold=REVIEW_THRESHOLD):
+    """Re-evaluate the review flag using a configurable confidence threshold
+    (instead of the fixed 0.80 baked into the original AI pipeline output)."""
+    for r in records:
+        low_class_conf = r['classification_confidence'] < threshold
+        # Only check invoice_number confidence when the field is actually expected
+        # (a contract legitimately has no invoice number, so confidence=0 there is fine)
+        low_field_conf = r['invoice_number'] is not None and r['invoice_number_confidence'] < threshold
+        if low_class_conf or low_field_conf:
+            r['needs_human_review'] = True
+    return records
+
+
 # ---------- LOAD ----------
-def load_to_warehouse(records, db_path='document_warehouse.db'):
+def load_to_warehouse(records, db_path=DB_PATH):
     """
     Loads transformed records into a simple star schema:
       dim_document_type : dimension table (document type lookup)
@@ -139,7 +159,7 @@ def load_to_warehouse(records, db_path='document_warehouse.db'):
 
 
 # ---------- QUERY / REPORTING ----------
-def run_reports(db_path='document_warehouse.db'):
+def run_reports(db_path=DB_PATH):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
@@ -175,10 +195,13 @@ def run_reports(db_path='document_warehouse.db'):
 
 
 if __name__ == "__main__":
+    print(f"CONFIG: DB_PATH={DB_PATH} | REVIEW_THRESHOLD={REVIEW_THRESHOLD}")
+
     raw = extract_documents()
     print(f"EXTRACT: {len(raw)} documents pulled from staging area")
 
     transformed = transform_documents(raw)
+    transformed = apply_confidence_threshold(transformed)
     print(f"TRANSFORM: {len(transformed)} records validated and cleaned")
 
     load_to_warehouse(transformed)

@@ -1,0 +1,9 @@
+# Dockerfile.etl — lightweight image just for the ETL/data-warehouse layer
+# (no need for Tesseract/OpenCV here since this container only runs SQL loading + reporting)
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY etl/etl_pipeline.py ./etl/etl_pipeline.py
+
+CMD ["python", "etl/etl_pipeline.py"]
